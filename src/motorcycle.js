@@ -355,17 +355,23 @@ export class Motorcycle {
     const targetLean = -this.steerAngle * Math.min(1, speedAbs / 12) * 0.7;
     this.lean += (targetLean - this.lean) * (1 - Math.pow(0.001, dt));
 
-    // ---- Move ----
+    // ---- Move with sub-step collision (prevents tunneling at low frame rate) ----
     const fwdX = Math.sin(this.heading);
     const fwdZ = Math.cos(this.heading);
-    const nextX = this.position.x + fwdX * this.speed * dt;
-    const nextZ = this.position.z + fwdZ * this.speed * dt;
+    const dxMove = fwdX * this.speed * dt;
+    const dzMove = fwdZ * this.speed * dt;
+    const moveLen = Math.hypot(dxMove, dzMove);
 
-    // Collision: if next position hits an obstacle or NPC, slide along axis.
+    // Step size kept smaller than the smallest collider (pedestrian r=0.4m + player r=0.7m
+    // = combined 1.1m), so even at boost speed we never skip past an NPC.
+    const STEP = 0.4;
+    const steps = Math.max(1, Math.ceil(moveLen / STEP));
+    const stepX = dxMove / steps;
+    const stepZ = dzMove / steps;
+
     let blocked = false;
     let npcHit = null;
-
-    const checkBlock = (cx, cz) => {
+    const collidesAt = (cx, cz) => {
       if (this.world.collide(cx, cz, 0.7)) return true;
       if (this.npcs) {
         const hit = this.npcs.collide(cx, cz, 0.7);
@@ -374,16 +380,20 @@ export class Motorcycle {
       return false;
     };
 
-    if (checkBlock(nextX, this.position.z)) {
-      blocked = true;
-    } else {
-      this.position.x = nextX;
+    for (let i = 0; i < steps; i++) {
+      const tryX = this.position.x + stepX;
+      if (collidesAt(tryX, this.position.z)) {
+        blocked = true; break;
+      }
+      this.position.x = tryX;
+
+      const tryZ = this.position.z + stepZ;
+      if (collidesAt(this.position.x, tryZ)) {
+        blocked = true; break;
+      }
+      this.position.z = tryZ;
     }
-    if (checkBlock(this.position.x, nextZ)) {
-      blocked = true;
-    } else {
-      this.position.z = nextZ;
-    }
+
     if (blocked) {
       // Bounce back / lose speed dramatically
       this.speed *= 0.35;
