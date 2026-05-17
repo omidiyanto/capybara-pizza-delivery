@@ -1,0 +1,22 @@
+{
+  "name": "capybara-pizza-delivery-game",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "3D open-world capybara pizza delivery game built with Three.js",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "server": "node server.js",
+    "start": "vite build && node server.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

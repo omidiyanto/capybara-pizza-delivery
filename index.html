@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Capybara Pizza Delivery 3D</title>
+    <link rel="stylesheet" href="/src/style.css" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛵%3C/text%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- Loading screen -->
+      <div id="loading-screen">
+        <div class="loading-inner">
+          <div class="logo">🛵 🍕</div>
+          <h1>Capybara Pizza Delivery</h1>
+          <p class="subtitle">Loading the city...</p>
+          <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        </div>
+      </div>
+
+      <!-- Start menu -->
+      <div id="start-menu" class="hidden">
+        <div class="menu-inner">
+          <div class="logo">🛵 🍕</div>
+          <h1>Capybara Pizza Delivery</h1>
+          <p class="subtitle">Open-world 3D delivery adventure</p>
+
+          <div class="lobby-stats">
+            <div class="stat"><div class="stat-label">Active now</div><div class="stat-num" id="stat-active">—</div></div>
+            <div class="stat"><div class="stat-label">Total players</div><div class="stat-num" id="stat-total">—</div></div>
+          </div>
+
+          <div id="current-user" class="current-user hidden">
+            <span class="cu-line">Welcome back, <strong id="current-user-name">—</strong></span>
+            <button id="signout-btn" class="text-btn">Sign out / change user</button>
+          </div>
+
+          <div class="username-field">
+            <label for="username-input">Choose your delivery name</label>
+            <input id="username-input" type="text" maxlength="16" placeholder="e.g. CapyChef" autocomplete="off" />
+            <p class="username-hint" id="username-hint">Required to start the shift</p>
+          </div>
+
+          <div class="leaderboard">
+            <h3>🏆 Top Drivers</h3>
+            <ol class="lb-list" id="leaderboard-list">
+              <li class="lb-empty">Loading...</li>
+            </ol>
+          </div>
+
+          <div class="menu-controls">
+            <h3>Controls</h3>
+            <ul class="ctrl-desktop">
+              <li><kbd>W</kbd> / <kbd>↑</kbd> — Throttle</li>
+              <li><kbd>S</kbd> / <kbd>↓</kbd> — Brake / reverse</li>
+              <li><kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd> — Steer</li>
+              <li><kbd>Space</kbd> — Hand-brake / drift</li>
+              <li><kbd>Shift</kbd> — Boost</li>
+              <li><kbd>C</kbd> camera • <kbd>R</kbd> reset • <kbd>M</kbd> map</li>
+            </ul>
+            <ul class="ctrl-mobile">
+              <li>🕹️ Left joystick — Steer</li>
+              <li>⏩ Right side buttons — Throttle / brake / boost</li>
+              <li>🗺️ Top-right button — Toggle map</li>
+            </ul>
+          </div>
+          <button id="start-btn" disabled>Start Delivering</button>
+        </div>
+      </div>
+
+      <!-- Sign-out confirm modal -->
+      <div id="signout-confirm" class="modal hidden">
+        <div class="modal-inner">
+          <h2>⚠️ Sign out?</h2>
+          <p>This will retire <strong id="signout-name">your username</strong> permanently.</p>
+          <p class="warn">You will <strong>never</strong> be able to use that name again — not even by you.</p>
+          <div class="modal-actions">
+            <button id="signout-no" class="ghost">Cancel</button>
+            <button id="signout-yes">Sign out anyway</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HUD -->
+      <div id="hud" class="hidden">
+        <div class="hud-top">
+          <div class="hud-card">
+            <div class="hud-label">Driver</div>
+            <div class="hud-value" id="hud-username">—</div>
+          </div>
+          <div class="hud-card">
+            <div class="hud-label">Cash</div>
+            <div class="hud-value">$<span id="hud-cash">0</span></div>
+          </div>
+          <div class="hud-card">
+            <div class="hud-label">Deliveries</div>
+            <div class="hud-value"><span id="hud-deliveries">0</span></div>
+          </div>
+          <div class="hud-card">
+            <div class="hud-label">Streak</div>
+            <div class="hud-value"><span id="hud-streak">0</span> <small id="hud-mult">×1.00</small></div>
+          </div>
+          <div class="hud-card">
+            <div class="hud-label">Time Left</div>
+            <div class="hud-value"><span id="hud-timer">--</span>s</div>
+          </div>
+          <div class="hud-card boost-card">
+            <div class="hud-label">Boost</div>
+            <div class="boost-bar"><div class="boost-fill" id="boost-fill"></div></div>
+          </div>
+        </div>
+
+        <div id="speedometer">
+          <div class="speed-value"><span id="speed-num">0</span><small>KM/H</small></div>
+          <div class="speed-label" id="gear-label">N</div>
+        </div>
+
+        <div id="objective">
+          <div class="obj-icon">🍕</div>
+          <div class="obj-text">
+            <div class="obj-title" id="obj-title">Head to Pizzeria</div>
+            <div class="obj-sub" id="obj-sub">Pick up a hot pizza</div>
+          </div>
+          <div class="obj-distance"><span id="obj-distance">0</span> m</div>
+        </div>
+
+        <canvas id="minimap"></canvas>
+
+        <div id="popup" class="popup hidden"></div>
+
+        <!-- Mobile touch controls (auto-shown on touch devices) -->
+        <div id="touch-controls" class="hidden">
+          <div id="touch-joystick" class="touch-joystick">
+            <div class="joy-base"></div>
+            <div class="joy-knob" id="joy-knob"></div>
+          </div>
+          <div class="touch-buttons">
+            <button id="btn-throttle" class="tbtn tbtn-throttle">▲</button>
+            <button id="btn-brake" class="tbtn tbtn-brake">▼</button>
+            <button id="btn-boost" class="tbtn tbtn-boost">⚡</button>
+            <button id="btn-handbrake" class="tbtn tbtn-hb">DRIFT</button>
+          </div>
+          <button id="btn-map" class="tbtn-map">🗺️</button>
+          <button id="btn-cam" class="tbtn-cam">📷</button>
+        </div>
+      </div>
+
+      <!-- Big map overlay -->
+      <div id="big-map" class="hidden">
+        <div class="big-map-inner">
+          <h2>City Map</h2>
+          <canvas id="bigmap-canvas"></canvas>
+          <p class="big-map-hint">Press <kbd>M</kbd> to close</p>
+        </div>
+      </div>
+
+      <!-- Game over -->
+      <div id="game-over" class="hidden">
+        <div class="menu-inner">
+          <h1 id="go-title">Shift Complete!</h1>
+          <p class="subtitle" id="go-sub">Nice work, capybara.</p>
+          <div class="stats">
+            <div><strong>Driver</strong> <span id="go-username">—</span></div>
+            <div><strong>Total cash</strong> <span id="go-cash">$0</span></div>
+            <div><strong>Deliveries</strong> <span id="go-deliveries">0</span></div>
+            <div><strong>Best streak</strong> <span id="go-streak">0</span></div>
+          </div>
+          <div class="leaderboard">
+            <h3>🏆 Top Drivers</h3>
+            <ol class="lb-list" id="go-leaderboard"><li class="lb-empty">Loading...</li></ol>
+          </div>
+          <button id="restart-btn">Play Again</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
